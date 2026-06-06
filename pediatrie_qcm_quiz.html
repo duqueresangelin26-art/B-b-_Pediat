@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pédiatrie UNIFA — Quiz Interactif</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0a0a0f;
+    color: #e8e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #12121a; }
+  ::-webkit-scrollbar-thumb { background: #3a3a60; border-radius: 3px; }
+
+  @keyframes floatParticle {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50% { transform: translateY(-20px) scale(1.1); }
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    60% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes spin {
+    from { transform: rotate(-90deg); }
+    to { transform: rotate(270deg); }
+  }
+  @keyframes gradShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .particle {
+    position: fixed;
+    border-radius: 50%;
+    opacity: 0.12;
+    pointer-events: none;
+    animation: floatParticle linear infinite;
+    filter: blur(1px);
+    z-index: 0;
+  }
+  .screen {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    position: relative;
+    z-index: 1;
+    animation: fadeSlideIn 0.35s ease;
+  }
+  .screen.hidden { display: none; }
+
+  /* CARDS */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 16px; padding: 20px 16px; text-align: center;
+  }
+  .stat-icon { font-size: 28px; margin-bottom: 4px; }
+  .stat-value { font-size: 28px; font-weight: 800; color: #A29BFE; }
+  .stat-label { font-size: 12px; color: #7070a0; margin-top: 2px; }
+
+  /* BUTTONS */
+  .btn-primary {
+    background: linear-gradient(135deg, #A29BFE, #6C5CE7);
+    border: none; color: white; padding: 16px 48px;
+    border-radius: 50px; font-size: 18px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 32px #A29BFE44;
+    transition: transform 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 40px #A29BFE66; }
+  .btn-ghost {
+    background: transparent; border: 2px solid #2a2a40;
+    color: #7070a0; padding: 12px 32px; border-radius: 50px;
+    font-size: 14px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-ghost:hover { border-color: #5050a0; color: #c0c0e0; }
+  .btn-back {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    color: #7070a0; padding: 8px 16px; border-radius: 20px;
+    cursor: pointer; font-size: 13px; transition: all 0.2s;
+  }
+  .btn-back:hover { background: #22223a; color: #e8e8f0; }
+  .btn-next {
+    border: none; color: white; padding: 12px 28px;
+    border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-next:hover { transform: translateY(-1px); }
+  .btn-secondary {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    color: #e8e8f0; padding: 14px 32px; border-radius: 50px;
+    cursor: pointer; font-size: 15px; transition: all 0.2s;
+  }
+  .btn-secondary:hover { background: #22223a; }
+  .btn-outline-purple {
+    background: transparent; border: 2px solid #A29BFE;
+    color: #A29BFE; padding: 14px 32px; border-radius: 50px;
+    cursor: pointer; font-size: 15px; transition: all 0.2s;
+  }
+  .btn-outline-purple:hover { background: #A29BFE22; }
+
+  /* CASE GRID */
+  .case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .case-card {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 20px; padding: 20px; cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .case-card:hover { transform: translateY(-4px); }
+  .case-num { font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+  .case-title { font-size: 14px; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
+  .case-qcount { font-size: 11px; color: #7070a0; }
+  .case-score-badge {
+    margin-top: 12px; display: flex; align-items: center; gap: 8px;
+    border-radius: 8px; padding: 6px 10px;
+  }
+
+  /* QUIZ */
+  .progress-bar-container {
+    height: 4px; border-radius: 2px;
+    background: #2a2a40; position: relative; overflow: hidden; margin-top: 6px;
+  }
+  .progress-bar-fill {
+    position: absolute; left: 0; top: 0; height: 100%;
+    border-radius: 2px; transition: width 0.4s ease;
+  }
+  .vignette-box {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 16px; padding: 16px; margin-bottom: 16px;
+  }
+  .vignette-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+  .vignette-text { margin: 0; font-size: 13px; line-height: 1.7; color: #c0c0d8; }
+
+  .question-box {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 20px; padding: 24px; margin-bottom: 16px;
+  }
+  .q-label { font-size: 12px; color: #7070a0; margin-bottom: 12px; }
+  .q-text { font-size: 16px; font-weight: 600; line-height: 1.5; margin-bottom: 20px; }
+
+  .option-btn {
+    width: 100%; text-align: left; cursor: pointer;
+    border-radius: 12px; padding: 14px 16px;
+    font-size: 14px; line-height: 1.4;
+    transition: all 0.2s ease; margin-bottom: 10px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .option-btn:last-child { margin-bottom: 0; }
+  .option-letter {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    transition: all 0.2s;
+  }
+
+  .explanation-box {
+    background: #0d1f1a; border: 1px solid #00B89444;
+    border-left: 4px solid #00B894;
+    border-radius: 16px; padding: 16px; margin-bottom: 16px;
+    animation: fadeSlideIn 0.3s ease;
+  }
+  .explanation-label { font-size: 11px; color: #00B894; font-weight: 700; margin-bottom: 8px; }
+  .explanation-text { margin: 0; font-size: 14px; line-height: 1.7; color: #a0d0c8; }
+
+  /* RESULTS */
+  .ring-container {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 160px; height: 160px; position: relative; margin-bottom: 32px;
+  }
+  .ring-svg { position: absolute; }
+  .ring-text { text-align: center; z-index: 1; }
+  .ring-pct { font-size: 40px; font-weight: 900; }
+  .ring-sub { font-size: 13px; color: #7070a0; }
+
+  /* ALL RESULTS */
+  .result-row {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 12; margin-bottom: 10px;
+  }
+  .mini-bar-track { height: 4px; border-radius: 2px; background: #2a2a40; overflow: hidden; flex: 1; }
+  .mini-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+  /* TITLE */
+  .main-title {
+    font-size: clamp(28px, 5vw, 48px); font-weight: 900; margin: 0 0 8px;
+    background: linear-gradient(135deg, #FF6B6B, #A29BFE, #4ECDC4, #FDCB6E);
+    background-size: 300% 300%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -1px; animation: gradShift 5s ease infinite;
+  }
+  .tag-cloud { margin-top: 48px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .tag {
+    background: #1a1a28; border: 1px solid #2a2a40;
+    border-radius: 20px; padding: 6px 14px; font-size: 12px; color: #7070a0;
+  }
+
+  .flex-row { display: flex; align-items: center; gap: 12px; }
+  .flex-end { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+  .flex-center { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .mb8 { margin-bottom: 8px; }
+  .mb16 { margin-bottom: 16px; }
+  .mb24 { margin-bottom: 24px; }
+  .mb32 { margin-bottom: 32px; }
+  .text-center { text-align: center; }
+
+  @media (max-width: 500px) {
+    .stat-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat-card { padding: 12px 8px; }
+    .stat-value { font-size: 20px; }
+    .btn-primary { padding: 14px 32px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Particles injected by JS -->
+<div id="particles"></div>
+
+<!-- ===== HOME ===== -->
+<div id="screen-home" class="screen">
+  <div class="text-center">
+    <div style="font-size:72px;margin-bottom:8px;animation:bounceIn 0.6s ease">🏥</div>
+    <h1 class="main-title">PÉDIATRIE UNIFA</h1>
+    <p style="color:#7070a0;font-size:16px;margin-bottom:32px">Quiz Interactif — 15 Cas Cliniques · 90 QCM</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-value">15</div>
+        <div class="stat-label">Cas Cliniques</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">❓</div>
+        <div class="stat-value">90</div>
+        <div class="stat-label">Questions Total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🏆</div>
+        <div class="stat-value" id="home-global-score">—</div>
+        <div class="stat-label">Score Global</div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="showScreen('caseList')">🚀 Commencer le Quiz</button>
+    <button class="btn-ghost" style="margin-left:16px" onclick="showScreen('allResults')">📊 Mes résultats</button>
+
+    <div class="tag-cloud">
+      <span class="tag">🏥 MAS</span>
+      <span class="tag">💧 Déshydratation</span>
+      <span class="tag">🫘 Néphro</span>
+      <span class="tag">💉 Vaccins</span>
+      <span class="tag">🌡️ Fièvre</span>
+      <span class="tag">🫁 Pneumo</span>
+      <span class="tag">🍼 Allaitement</span>
+      <span class="tag">🦟 Paludisme</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CASE LIST ===== -->
+<div id="screen-caseList" class="screen hidden">
+  <div class="flex-row mb24">
+    <button class="btn-back" onclick="showScreen('home')">← Retour</button>
+    <h2 style="font-size:22px;font-weight:700">Choisir un Cas Clinique</h2>
+  </div>
+  <div class="case-grid" id="case-grid"></div>
+</div>
+
+<!-- ===== QUIZ ===== -->
+<div id="screen-quiz" class="screen hidden">
+  <!-- Header -->
+  <div class="flex-row mb16" id="quiz-header">
+    <button class="btn-back" onclick="quitCase()">← Quitter</button>
+    <div style="flex:1">
+      <div class="flex-row">
+        <span id="quiz-case-icon" style="font-size:20px"></span>
+        <span id="quiz-case-title" style="font-size:14px;font-weight:700"></span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="quiz-progress-fill"></div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <span id="quiz-q-num" style="font-size:18px;font-weight:800"></span>
+    </div>
+  </div>
+
+  <!-- Vignette -->
+  <div class="vignette-box" id="quiz-vignette">
+    <div class="vignette-label" id="quiz-vignette-label">📋 VIGNETTE CLINIQUE</div>
+    <p class="vignette-text" id="quiz-vignette-text"></p>
+  </div>
+
+  <!-- Question -->
+  <div class="question-box">
+    <div class="q-label" id="quiz-q-label"></div>
+    <p class="q-text" id="quiz-q-text"></p>
+    <div id="quiz-options"></div>
+  </div>
+
+  <!-- Explanation -->
+  <div class="explanation-box hidden" id="quiz-explanation">
+    <div class="explanation-label">💡 EXPLICATION</div>
+    <p class="explanation-text" id="quiz-explanation-text"></p>
+  </div>
+
+  <!-- Actions -->
+  <div class="flex-end hidden" id="quiz-actions">
+    <button class="btn-secondary" onclick="finishCase()" style="font-size:14px;padding:12px 24px">Terminer le cas</button>
+    <button class="btn-next" id="btn-next" onclick="nextOrFinish()"></button>
+  </div>
+</div>
+
+<!-- ===== RESULTS ===== -->
+<div id="screen-results" class="screen hidden text-center">
+  <div style="font-size:64px;margin-bottom:8px;animation:bounceIn 0.5s ease" id="result-emoji"></div>
+  <h2 style="font-size:28px;font-weight:800;margin:0 0 4px" id="result-title"></h2>
+  <p style="color:#7070a0;margin-bottom:32px" id="result-case-name"></p>
+
+  <div class="ring-container">
+    <svg class="ring-svg" id="result-ring" width="160" height="160">
+      <circle cx="80" cy="80" r="70" fill="none" stroke="#2a2a40" stroke-width="8"/>
+      <circle cx="80" cy="80" r="70" fill="none" id="result-ring-circle"
+        stroke="#A29BFE" stroke-width="8"
+        stroke-dasharray="0 439.8"
+        style="transform-origin:80px 80px;transform:rotate(-90deg);transition:stroke-dasharray 0.8s cubic-bezier(.4,0,.2,1)"/>
+    </svg>
+    <div class="ring-text">
+      <div class="ring-pct" id="result-pct"></div>
+      <div class="ring-sub" id="result-frac"></div>
+    </div>
+  </div>
+
+  <div class="flex-center">
+    <button class="btn-next" id="btn-retry" onclick="retryCase()">🔄 Recommencer</button>
+    <button class="btn-secondary" onclick="showScreen('caseList')">📋 Autres cas</button>
+    <button class="btn-outline-purple" onclick="showScreen('allResults')">📊 Tableau de bord</button>
+  </div>
+</div>
+
+<!-- ===== ALL RESULTS ===== -->
+<div id="screen-allResults" class="screen hidden">
+  <div class="flex-row mb24">
+    <button class="btn-back" onclick="showScreen('home')">← Accueil</button>
+    <h2 style="font-size:22px;font-weight:700">📊 Tableau de Bord</h2>
+  </div>
+  <div class="stat-grid mb24">
+    <div class="stat-card">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value" id="ar-cases"></div>
+      <div class="stat-label">Cas complétés</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">❓</div>
+      <div class="stat-value" id="ar-questions" style="color:#4ECDC4"></div>
+      <div class="stat-label">Questions répondues</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🏆</div>
+      <div class="stat-value" id="ar-score" style="color:#FDCB6E"></div>
+      <div class="stat-label">Score global</div>
+    </div>
+  </div>
+  <div id="ar-list"></div>
+</div>
+
+<script>
+// ==================== DATA ====================
+const CASES = [
+  {
+    id:1, title:"Jonathan — Diarrhée & Malnutrition", icon:"🏥", color:"#FF6B6B", glow:"#FF6B6B44",
+    presentation:`Jonathan, 4 ans, se présente aux urgences pour fièvre, diarrhée, vomissements et augmentation de volume des membres inférieurs. À l'anamnèse, la mère rapporte des selles glairo-sanguinolentes non abondantes, accompagnées de douleur abdominale. Poids = 8,5 kg (< au 3e percentile), Taille = 85 cm, P/T < -2ET, Température = 37,5°C, FC = 140 bpm, FR = 30 c/min. Il est très apathique, les cheveux sont roux et cassants, conjonctives pâles, bruits cardiaques réguliers mais accélérés. À l'auscultation, poumons clairs, œdème 2+ des membres inférieurs, mous, prenant le godet. Signes évidents de déshydratation modérée, TRC < 3 secondes.`,
+    questions:[
+      {q:"Quel est le diagnostic le plus probable ?",options:["Décompensation cardiaque","Insuffisance rénale aiguë","Kwashiorkor","Glomérulonéphrite aiguë"],answer:2,explanation:"Le tableau clinique (œdème bilatéral prenant le godet, cheveux roux et cassants, P/T < -2ET, apathie) est classique du Kwashiorkor — malnutrition aiguë sévère par carence protéique prédominante."},
+      {q:"L'œdème 2+ des membres inférieurs intéresse :",options:["Les dos du pieds jusqu'aux chevilles","Les dos du pieds jusqu'à l'abdomen","Les dos du pieds jusqu'aux jambes","Aucune"],answer:2,explanation:"L'œdème 2+ correspond à une atteinte des dos du pieds jusqu'aux jambes. L'œdème 3+ monte jusqu'à l'abdomen."},
+      {q:"La glycémie capillaire revient à 20 mg/dl. Jonathan a :",options:["Une hyperglycémie","Une hypoglycémie","Une glycémie normale pour son âge","Le diabète type 1"],answer:1,explanation:"La glycémie normale est > 54 mg/dl. À 20 mg/dl, il s'agit d'une hypoglycémie sévère, complication majeure de la malnutrition aiguë sévère."},
+      {q:"Quelle est la meilleure attitude face à cette hypoglycémie ?",options:["Donner de l'eau sucrée par la bouche","Mettre une voie veineuse et donner du D/W 10%","Mettre un tube de Levine et donner de l'eau sucrée","Aucune"],answer:1,explanation:"Face à une hypoglycémie sévère chez un enfant malnutri avec vomissements, la voie IV avec D/W 10% est la bonne attitude."},
+      {q:"Pour apprécier le degré de déshydratation chez Jonathan, on évalue :",options:["Les muqueuses","Le signe du pli","La paume des mains","Aucune"],answer:1,explanation:"Chez l'enfant malnutri, le signe du pli cutané est le paramètre de référence pour évaluer la déshydratation extracellulaire."},
+      {q:"Selon le mécanisme physiopathologique, Jonathan a une diarrhée :",options:["Invasive (glairo-sanguinolente)","Sécrétoire","Par accélération du transit intestinal","Aucune"],answer:0,explanation:"Les selles glairo-sanguinolentes avec douleur abdominale signent une diarrhée invasive d'origine bactérienne."}
+    ]
+  },
+  {
+    id:2, title:"Pierre Richard — Kwashiorkor Hospitalisé", icon:"🍼", color:"#4ECDC4", glow:"#4ECDC444",
+    presentation:`Pierre Richard, nourrisson de 12 mois pesant 8 kg, est venu aux urgences pour fièvre, anorexie et œdème des membres inférieurs. À l'examen physique ses cheveux sont roux, les conjonctives sont peu rosées, les poumons sont rudes, l'abdomen est augmenté de volume avec hépatomégalie à 3 cm du rebord costal, œdème 2+, bilatéral mou, indolore, prenant le godet. Il a une légère pâleur mais un bon état hémodynamique.`,
+    questions:[
+      {q:"Pierre Richard présente quel type de malnutrition ?",options:["Marasme","Kwashiorkor","Kwash-Marasme","Aucune"],answer:1,explanation:"La triade cheveux roux + œdème bilatéral prenant le godet + hépatomégalie définit le Kwashiorkor."},
+      {q:"Quel lait thérapeutique utiliser au début de son admission ?",options:["F100 dilué","F100","F75","½F100 et ½F75"],answer:2,explanation:"En phase 1 (stabilisation), le F75 est toujours utilisé — y compris chez les enfants avec œdème (Kwashiorkor). Le F100 est réservé à la phase 2."},
+      {q:"Les 2 complications à craindre à l'admission chez un malnutri sévère sont :",options:["Décompensation cardiaque et septicémie","Septicémie et hypothermie","Hypoglycémie et hypothermie","Anémie sévère et hypothermie"],answer:2,explanation:"L'hypoglycémie et l'hypothermie sont les 2 complications immédiates à prévenir dans les 24 premières heures."},
+      {q:"Quels sont les bilans de première intention ?",options:["Hémogramme - CRP - Radio thorax","Écho-cardiographie - Hémogramme - Urines","Examen selles - Hémogramme - Scanner","Albuminémie - Hémogramme - Radio thorax"],answer:3,explanation:"L'albuminémie confirme l'hypoprotéinémie du Kwashiorkor, l'hémogramme évalue l'anémie, et la radio thorax détecte une pneumonie ou décompensation."},
+      {q:"La complication la plus fréquente du syndrome néphrotique dont il faut prévenir les parents :",options:["Insuffisance rénale","Rechute du syndrome néphrotique","Hématurie microscopique","HTA"],answer:1,explanation:"La rechute est la complication la plus fréquente du syndrome néphrotique idiopathique de l'enfant."},
+      {q:"Un sachet de PLUMPY NUT contient :",options:["100 Kcal","200 Kcal","250 Kcal","500 Kcal"],answer:3,explanation:"Un sachet de PLUMPY NUT (92g) contient 500 Kcal. Il est utilisé en phase 2 en ambulatoire, quand l'enfant commence à manger."}
+    ]
+  },
+  {
+    id:3, title:"Bruno — Glomérulonéphrite Post-Infectieuse", icon:"🫘", color:"#A29BFE", glow:"#A29BFE44",
+    presentation:`Bruno, garçonnet de 6 ans, se présente aux urgences pour céphalées, œdème du visage et des membres inférieurs, hématurie. La maman rapporte que son fils avait une infection cutanée les deux semaines précédentes. À l'examen physique : TA = 145/90, FC = 120, FR = 30, Temp = 36,5°C. Bandelette urinaire : protéines 2+ et sang 4+.`,
+    questions:[
+      {q:"Quel est le diagnostic le plus probable ?",options:["Syndrome néphrotique impur","Syndrome néphrotique pur","Glomérulonéphrite aiguë post-infectieuse","Décompensation cardiaque"],answer:2,explanation:"L'infection cutanée préalable (2 semaines), l'hématurie macroscopique, la protéinurie, l'HTA et les œdèmes définissent le syndrome néphritique aigu post-streptococcique."},
+      {q:"Quel est le germe le plus souvent en cause ?",options:["Staphylococcus aureus","Streptocoque β hémolytique du groupe A","Streptocoque β hémolytique du groupe B","Candida albicans"],answer:1,explanation:"La GNA post-infectieuse est causée dans la grande majorité des cas par le Streptocoque β hémolytique du groupe A. C'est la glomérulopathie la plus fréquente chez l'enfant en pays sous-développé."},
+      {q:"L'hématurie macroscopique de Bruno disparaît quand ?",options:["1 semaine","2 mois","4 semaines","8 semaines"],answer:2,explanation:"Dans la GNA post-streptococcique : hématurie macroscopique → 4 semaines, normalisation TA → 2 semaines, normalisation C3 → 8 semaines."},
+      {q:"La tension artérielle se normalise quand ?",options:["2 semaines","6 semaines","8 semaines","10 semaines"],answer:0,explanation:"La normalisation de la TA survient en 2 semaines dans la GNA post-streptococcique. C'est une complication aiguë à surveiller."},
+      {q:"La GNA post-streptococcique est associée à :",options:["Une hausse du C3","Une baisse du C3","Un C3 normal","Une baisse du C4"],answer:1,explanation:"La GNA post-streptococcique active la voie alterne du complément, entraînant une baisse caractéristique du C3 (qui se normalise en 6-8 semaines)."},
+      {q:"L'évolution la plus habituelle de la GNA dans au moins 80% des cas chez l'enfant :",options:["Guérison simple sans séquelle clinique à 2 ans","Persistance d'une protéinurie définitive","Évolution vers l'insuffisance rénale chronique","Insuffisance rénale rapidement progressive"],answer:0,explanation:"Dans plus de 80% des cas chez l'enfant, la GNA post-streptococcique guérit complètement sans séquelle clinique à 2 ans."}
+    ]
+  },
+  {
+    id:4, title:"Syndrome Néphrotique Idiopathique", icon:"💧", color:"#FD79A8", glow:"#FD79A844",
+    presentation:`Enfant de 5 ans présentant des œdèmes généralisés (visage, membres inférieurs), prise de poids récente, urine mousseuse. Pas d'hématurie, pas d'HTA. Protéinurie massive à la bandelette. Protéines totales sériques < 60g/L. Le traitement par corticoïdes entraîne la disparition complète des anomalies cliniques et biologiques en 4 semaines.`,
+    questions:[
+      {q:"Le syndrome néphritique aigu comporte :",options:["Prise de poids + œdèmes MI + natriurèse faible + hématurie + réduction filtration — a, b et d vraies","a, b et e sont vraies","a, b, d et e sont vraies","Aucune"],answer:1,explanation:"Le syndrome néphritique aigu = œdèmes + hématurie + réduction de la filtration glomérulaire + natriurèse basse + HTA. Réponse : a, b et e sont vraies."},
+      {q:"La conduite thérapeutique dans le syndrome néphrotique pur comporte :",options:["Prednisone 2mg/kg/j + aspirine 100mg/kg/j + pénicilline — a,b,c vraies","Prednisone 2mg/kg/j + régime désodé + Vit D — a, d, e vraies","b, c sont vraies","Aucune"],answer:1,explanation:"Le traitement du SN pur = Prednisone 2mg/kg/j (max 60-80mg) + régime désodé + supplément en Vitamine D. Réponse : a, d, e sont vraies."},
+      {q:"N'appartient PAS au syndrome néphrotique pur :",options:["Protéinurie > 3g/24h","Protéines totales < 60g/L","Œdèmes MI","HTA permanente et 10000-50000 GR/champ — b et e"],answer:3,explanation:"L'HTA permanente et l'hématurie significative sont des signes d'impureté (SN impur). Le SN pur = protéinurie massive + hypoprotidémie + œdèmes + hyperlipidémie, sans hématurie ni HTA."},
+      {q:"La corticosensibilité c'est :",options:["Rémission complète après 3 semaines de traitement","Rémission complète après 4 semaines de corticothérapie orale","Protéinurie < 3-5mg/kg/24h","b, c, d sont vraies"],answer:3,explanation:"La corticosensibilité = rémission complète après 4 semaines de prednisone orale + protéinurie < 3-5mg/kg/24h + albuminémie > 30g/L."},
+      {q:"Indications de la ponction biopsie rénale dans le SN, SAUF :",options:["Début avant 1 an ou après 10 ans","Corticorésistance","SN impur persistant (hématurie, IR, HTA)","Corticosensibilité"],answer:3,explanation:"La biopsie rénale est indiquée en cas de SN impur, corticorésistance, début avant 1 an ou après 10 ans. La corticosensibilité = signe favorable, pas d'indication de biopsie."},
+      {q:"Un enfant avec SN ne doit pas rester allongé car :",options:["Risque d'escarre","Risque de thrombose → embolie pulmonaire","Risque de pneumonie","Risque d'hypoglycémie"],answer:1,explanation:"La perte massive de protéines crée un état prothrombotique. L'enfant doit être mobilisé pour éviter la thrombose veineuse profonde et l'embolie pulmonaire."}
+    ]
+  },
+  {
+    id:5, title:"MAS — Protocole Traitement", icon:"💊", color:"#00B894", glow:"#00B89444",
+    presentation:`Dans le cadre du traitement de la malnutrition aiguë sévère (MAS), vous gérez plusieurs enfants : un de 10 kg en phase de stabilisation (Phase 1) et un autre en phase de récupération (Phase 2). Vous devez calculer les quantités de lait thérapeutique et connaître les protocoles de prise en charge nutritionnelle hospitalière.`,
+    questions:[
+      {q:"Le lait thérapeutique destiné à faire prendre du poids à l'enfant hospitalisé en USN est :",options:["F125","F75","F100","Aucune"],answer:2,explanation:"Le F100 (100 Kcal/100 mL) est le lait de la phase 2 (récupération), destiné à faire prendre du poids. Le F75 est le lait de stabilisation (phase 1)."},
+      {q:"Pour un enfant de 10 kg en phase 1 — F75 (130 cc/kg/jour, 8 repas) : quantité par repas ?",options:["100 mL/repas","130 mL/repas","162,5 mL/repas","200 mL/repas"],answer:2,explanation:"130 × 10 = 1300 cc/jour ÷ 8 repas = 162,5 mL/repas. Chaque repas apporte 100 Kcal × 10 kg / 8 repas = 125 Kcal/repas."},
+      {q:"Le Resomal (solution de réhydratation pour malnutris) a :",options:["Plus de sodium et moins de potassium que le SRO normal","Plus de potassium et moins de sodium que le SRO normal","Plus de calcium et sodium que le SRO normal","Aucune"],answer:1,explanation:"Le Resomal contient plus de potassium et moins de sodium que le SRO standard. L'excès de sodium chez l'enfant malnutri risque d'aggraver la décompensation cardiaque."},
+      {q:"Dans la prise en charge de la MAS sévère (Phase 1), sont vraies :",options:["La Vitamine A est donnée systématiquement à l'entrée","On donne le F100 dilué chez les enfants < 6 mois","On donne le F75 chez tous les enfants avec œdème","b et c"],answer:3,explanation:"En phase 1 : F75 pour tous les enfants (avec ou sans œdème) + F100 dilué pour les < 6 mois + Vitamine A à J1, J2 et à la sortie."},
+      {q:"Dans le traitement de la MAS type marasme, les affirmations vraies sont :",options:["F75 donné en Phase 1 en absence d'œdème","F75 destiné à faire prendre de poids","F75 en Phase 1 et F100 en Phase 2, Vit A J1/J2/sortie, Zinc systématique — a, c, d, e vraies","c, d, e"],answer:2,explanation:"Vraies : F75 en phase 1 (a), F75 P1/F100 P2 (c), Vitamine A J1/J2/sortie (d), Zinc systématique (e). Réponse = a, c, d, e sont vraies."},
+      {q:"Le lait thérapeutique F75 :",options:["A 75 Kcal pour chaque 100 mL de lait","Est un lait de stabilisation","Est donné en phase 2","a et b sont vraies"],answer:3,explanation:"Le F75 = 75 Kcal/100 mL + lait de stabilisation (Phase 1). Il stabilise l'état métabolique sans faire prendre du poids. Réponse = a et b sont vraies."}
+    ]
+  },
+  {
+    id:6, title:"Vaccination & Immunologie Pédiatrique", icon:"💉", color:"#FDCB6E", glow:"#FDCB6E44",
+    presentation:`Jonathan (4 ans) a eu 2 doses de Prévenar, 2 doses de Pentavalent et 1 dose de Rotavirus. Il revient pour rattrapage vaccinal. Vous êtes également interrogé sur les principes généraux de la vaccination, la composition des vaccins combinés et l'immunité induite.`,
+    questions:[
+      {q:"Quels vaccins administrer à Jonathan pour le rattrapage ?",options:["Rotavirus, ROR, Typhoïde, méningite, varicelle, hépatite A","Pentavalent, ROR, Typhoïde, Méningite, Hépatite A, Varicelle","ROR, Typhoïde, Méningite, Hépatite A, Varicelle, Pneumo 23","Aucune"],answer:1,explanation:"Il lui manque : 1 dose de Pentavalent (il en a eu 2/3) + ROR, Typhoïde, Méningite, Hépatite A, Varicelle non encore reçus."},
+      {q:"Les vaccins qui composent le Pentavalent sont :",options:["Diphtérie-tétanos-coqueluche-Polio-hépatite B","Diphtérie-tétanos-coqueluche-Haemophilus influenzae type b-hépatite B","Diphtérie-tétanos-coqueluche-hépatite B","Aucune"],answer:1,explanation:"Le Pentavalent = Diphtérie + Tétanos + Coqueluche + Hib (Haemophilus influenzae type b) + Hépatite B. Vaccin combiné 5-en-1."},
+      {q:"La vaccination utilise :",options:["L'immunité active naturelle","L'immunité passive naturelle","L'immunité active artificielle","L'immunité passive artificielle"],answer:2,explanation:"La vaccination induit une immunité ACTIVE (le corps fabrique ses propres anticorps) ARTIFICIELLE (par un antigène introduit). L'immunité passive artificielle = sérothérapie."},
+      {q:"Concernant le vaccin ROR :",options:["Protège contre rougeole, oreillon et rubéole","Est donné à partir de 6 mois","a et b","Aucune"],answer:2,explanation:"Le ROR protège contre Rougeole + Oreillons + Rubéole. Donné à partir de 9 mois (1ère dose à 9 mois, 2ème à 15 mois). Réponse a et b sont vraies dans le contexte du cours."},
+      {q:"Les taches de Koplik sont pathognomoniques de :",options:["La scarlatine","La roséole","La rougeole","Le mégalérythème épidémique"],answer:2,explanation:"Les taches de Koplik (points blanchâtres sur la muqueuse buccale) sont PATHOGNOMONIQUES de la rougeole. Elles précèdent l'éruption cutanée de 1-2 jours."},
+      {q:"Concernant la scarlatine :",options:["Le germe est le streptocoque β hémolytique du groupe B","Le germe est le streptocoque β hémolytique du groupe A","L'atteinte cutanée est un érythème maculo-papuleux","b et c"],answer:3,explanation:"La scarlatine = streptocoque β hémolytique groupe A + érythème maculo-papuleux diffus avec signe de Pastia et langue de chat. Réponse = b et c."}
+    ]
+  },
+  {
+    id:7, title:"Fièvre de l'Enfant — Diagnostic & Traitement", icon:"🌡️", color:"#E17055", glow:"#E1705544",
+    presentation:`En consultation pédiatrique, un enfant fébrile se présente avec une température axillaire de 38,8°C. Vous devez évaluer les urgences fébriles, connaître le traitement symptomatique et les principes de l'examen clinique d'un enfant fébrile, en tenant compte des particularités pédiatriques.`,
+    questions:[
+      {q:"Concernant l'examen clinique d'un enfant ayant de la fièvre :",options:["Les bébés sont en couche pour éviter de souiller la table","Ne pas examiner les oreilles si l'enfant ne s'en plaint pas","Ne pas demander ses symptômes à l'enfant car il n'est pas fiable","On doit examiner la gorge de l'enfant"],answer:3,explanation:"L'examen d'un enfant fébrile est SYSTÉMATIQUE et COMPLET. On doit toujours examiner la gorge et les oreilles (otite silencieuse fréquente)."},
+      {q:"La fièvre représente une urgence SAUF :",options:["Toute fièvre chez un nouveau-né = infection materno-foetale jusqu'à preuve du contraire","Une fièvre mal tolérée est une urgence thérapeutique","Un nourrisson fébrile se déshydrate très rapidement","Des cris vigoureux lors de l'examen = signe de mauvaise tolérance"],answer:3,explanation:"Des cris vigoureux lors de l'examen clinique sont un signe de BONNE tolérance et de bonne vitalité chez l'enfant."},
+      {q:"Le traitement symptomatique de la fièvre comprend :",options:["Déshabillage de l'enfant","Majoration de l'hydratation","Paracétamol","a, b et c"],answer:3,explanation:"Traitement symptomatique = déshabillage + majoration hydratation + aération + compresses froides + paracétamol (15 mg/kg/dose toutes les 6h)."},
+      {q:"Quelle est la température centrale si la température axillaire est de 38°C ?",options:["39°C","40°C","38,5°C","Aucune"],answer:2,explanation:"La température rectale (centrale) est supérieure de 0,5°C à la température axillaire. Axillaire 38°C → Rectale ≈ 38,5°C."},
+      {q:"Un enfant de 10 kg — Paracétamol (120 mg/5mL). Quelle quantité en mL ?",options:["4 mL","5 mL","6 mL","6,25 mL"],answer:2,explanation:"Dose = 15 mg/kg × 10 kg = 150 mg. Si 120 mg → 5 mL, alors 150 mg → x = (150 × 5)/120 = 6,25 mL ≈ 6 mL."},
+      {q:"Concernant les convulsions fébriles simples chez l'enfant, sont vraies :",options:["Surviennent de 6 mois à 6 ans","Durent moins de 15 minutes","Sont généralisées sans déficit postcritique","Toutes les réponses"],answer:3,explanation:"Les convulsions fébriles simples : âge 6 mois à 6 ans, durée < 15 min, généralisées, sans déficit postcritique. Il faut éliminer une méningite. Toutes les réponses sont vraies."}
+    ]
+  },
+  {
+    id:8, title:"Pneumonie de l'Enfant", icon:"🫁", color:"#6C5CE7", glow:"#6C5CE744",
+    presentation:`Un enfant de 3 ans se présente avec toux, fièvre à 39°C, polypnée (FR = 48/min) et tirage sous-costal. La radiographie thoracique montre une opacité lobaire droite. Vous devez diagnostiquer et prendre en charge cette pneumonie pédiatrique selon l'âge et l'agent pathogène.`,
+    questions:[
+      {q:"Une infection ou inflammation au niveau des bronches c'est :",options:["Bronchiolite","Bronchite","Bronchiectasie","Pneumonie"],answer:1,explanation:"La bronchite = inflammation/infection des bronches. La bronchiolite = atteinte des bronchioles (< 2 ans, VRS++). La bronchiectasie = dilatation pathologique permanente des bronches."},
+      {q:"L'agent pathogène le plus fréquent dans la pneumonie virale est :",options:["VRS","Adénovirus","Parvovirus B19","Cytomégalovirus"],answer:0,explanation:"Le VRS (Virus Respiratoire Syncytial) est de loin l'agent viral le plus fréquent dans les pneumonies et bronchiolites pédiatriques."},
+      {q:"L'agent pathogène le plus souvent responsable de la pneumonie bactérienne chez l'enfant est :",options:["Mycoplasma pneumoniae","Streptocoque pneumoniae (Pneumocoque)","Staphylococcus aureus","Bordetella pertussis"],answer:1,explanation:"Streptococcus pneumoniae (Pneumocoque) est le principal germe de la pneumonie bactérienne chez l'enfant (toutes tranches d'âge)."},
+      {q:"La bactérie la plus souvent responsable chez les enfants de PLUS de 3 ans est :",options:["Mycoplasma pneumoniae","Streptocoque pneumoniae","Staphylococcus aureus","Bordetella pertussis"],answer:0,explanation:"Après 3 ans, Mycoplasma pneumoniae devient le germe prédominant (pneumonie atypique). Avant 3 ans, le Pneumocoque domine."},
+      {q:"Pneumopathie accompagnée d'une inflammation de la plèvre avec épanchement :",options:["Pneumopathie aiguë","Pneumonie grave","Pleuro-pneumopathie","Cancer pulmonaire"],answer:2,explanation:"La pleuro-pneumopathie = pneumonie + pleurésie avec épanchement pleural. Forme grave nécessitant hospitalisation et antibiothérapie IV."},
+      {q:"Chez les nourrissons infectés au VIH, le germe responsable d'au moins ¼ des décès est :",options:["Mycoplasma pneumoniae","Streptocoque pneumoniae","Staphylococcus aureus","Pneumocystis jiroveci"],answer:3,explanation:"Pneumocystis jiroveci est responsable d'au moins ¼ des décès par pneumonie chez les nourrissons VIH+. La prophylaxie par cotrimoxazole est systématique."}
+    ]
+  },
+  {
+    id:9, title:"Déshydratation de l'Enfant", icon:"💧", color:"#00CEC9", glow:"#00CEC944",
+    presentation:`Un nourrisson de 8 mois, pesant 7 kg initialement, présente une diarrhée aiguë depuis 2 jours avec vomissements. À l'examen : pli cutané persistant, fontanelle antérieure déprimée, yeux excavés, muqueuses sèches, absence de larmes, irritabilité. On calcule la perte de poids pour estimer le degré de déshydratation.`,
+    questions:[
+      {q:"Les signes de déshydratation extracellulaire que recherchent les professionnels :",options:["Yeux excavés, cernés","Pli cutané","Dépression de la fontanelle","a et b"],answer:3,explanation:"La déshydratation extracellulaire se manifeste par yeux excavés/cernés + pli cutané. La soif vive et la marbrure sont des signes de déshydratation intracellulaire."},
+      {q:"Si la perte de poids est entre 5% et 10%, les signes cliniques sont :",options:["Dépression de la fontanelle","Yeux cernés","Collapsus","a et b","a et c","b et c"],answer:3,explanation:"Entre 5-10% de perte de poids (déshydratation modérée) : dépression de la fontanelle + yeux cernés. Le collapsus survient à partir de 10% (déshydratation sévère)."},
+      {q:"Concernant la déshydratation hypernatrémique, hyperosmolaire :",options:["Perte d'eau = perte de sodium","Perte d'eau < perte de sodium","Perte d'eau > perte de sodium","Aucune"],answer:2,explanation:"Déshydratation hypernatrémique = perte d'EAU > perte de sodium → le sodium se concentre → hypernatrémie. Cliniquement : enfant agité, soif intense."},
+      {q:"Concernant la déshydratation isotonique :",options:["Perte d'eau > perte de sodium","Perte d'eau < perte de sodium","Perte d'eau = perte de sodium","Aucune"],answer:2,explanation:"Dans la déshydratation isotonique, les pertes d'eau et de sodium sont proportionnelles → la natrémie reste normale (135-145 mEq/L)."},
+      {q:"La réhydratation doit être poursuivie aussi longtemps que dure la diarrhée :",options:["Vrai","Faux"],answer:0,explanation:"VRAI. La réhydratation doit être maintenue aussi longtemps que la diarrhée persiste. L'arrêt prématuré expose au risque de déshydratation rechutante."},
+      {q:"Des recherches biologiques en cas de déshydratation par diarrhée aiguë porteront sur :",options:["Natrémie","Kaliémie","Hyperprotéinémie","Hyperglycémie","Acidose métabolique — a, b, e sont vraies"],answer:4,explanation:"Bilans : natrémie (a), kaliémie (b), acidose métabolique (e). La diarrhée entraîne une fuite de bicarbonates → acidose métabolique. Réponse : a, b, e sont vraies."}
+    ]
+  },
+  {
+    id:10, title:"Allaitement Maternel & Laits", icon:"🍼", color:"#FFEAA7", glow:"#FFEAA744",
+    presentation:`Consultation de puériculture. Une mère vient pour des conseils sur l'alimentation de son nouveau-né. Elle allaite depuis la naissance et se pose des questions sur les différents types de lait maternel, les contre-indications à l'allaitement, et les laits artificiels de substitution.`,
+    questions:[
+      {q:"Le lait maternel riche en immunoglobulines, anticorps et protéines, mais moins de graisses et glucides est :",options:["Lait de transition","Lait mature","Le colostrum","Aucune"],answer:2,explanation:"Le colostrum = premier lait (J1-J5), riche en immunoglobulines (IgA sécrétoires), anticorps et protéines, mais pauvre en graisses et glucides. C'est l'«or jaune» de protection du nouveau-né."},
+      {q:"La position la plus courante pour allaiter un nourrisson est :",options:["Madone","Madone inversée","Ballon de Rugby","Aucune"],answer:0,explanation:"La position Madone (berceuse) = la plus courante : mère assise, bébé en travers sur les bras, tête dans le creux du coude."},
+      {q:"La principale contre-indication à l'allaitement maternel est :",options:["Galactosémie chez le nourrisson","Calcémie chez la mère","Hypoglycémie chez le nourrisson","Aucune"],answer:0,explanation:"La galactosémie congénitale chez le nourrisson est la principale contre-indication absolue : le lactose du lait maternel est métabolisé en galactose toxique pour ces enfants."},
+      {q:"Le lait maternel contient MOINS d'immunoglobulines que le lait de vache :",options:["Vrai","Faux"],answer:1,explanation:"FAUX. Le lait maternel contient BEAUCOUP PLUS d'immunoglobulines (IgA sécrétoires) que le lait de vache. C'est un avantage majeur de l'allaitement."},
+      {q:"Ce sont des laits de substitution, SAUF :",options:["Gallia","Enfamil","Modilac","Alaska"],answer:3,explanation:"Gallia, Enfamil et Modilac sont des préparations pour nourrissons reconnues. Alaska n'est pas un lait de substitution infantile commercialisé."},
+      {q:"L'allaitement maternel exclusif exige que, SAUF :",options:["L'enfant reçoive le lait de sa mère","L'enfant reçoive le lait d'une nourrice","L'enfant reçoive de l'eau","L'enfant reçoive le lait d'une banque de lait"],answer:2,explanation:"L'allaitement maternel EXCLUSIF = seul le lait maternel (mère, nourrice ou banque). Même l'eau est exclue avant 6 mois. Donner de l'eau rompt l'exclusivité."}
+    ]
+  },
+  {
+    id:11, title:"Malnutrition — Clinique & Anthropométrie", icon:"📏", color:"#FD79A8", glow:"#FD79A844",
+    presentation:`Lors d'une consultation de nutrition pédiatrique, vous évaluez plusieurs enfants pour détecter et classer une éventuelle malnutrition aiguë sévère. Vous utilisez les paramètres anthropométriques standards et vous confrontez à des questions sur la physiopathologie des différentes formes de malnutrition.`,
+    questions:[
+      {q:"Paramètres permettant de diagnostiquer la MAS, SAUF :",options:["Taille","Poids","Rapport poids/taille","Rapport Taille/âge","Périmètre brachial"],answer:3,explanation:"Le Rapport Taille/Âge mesure le retard de croissance (malnutrition CHRONIQUE). Les indicateurs de MAS = Poids/Taille < -3ET + Périmètre brachial < 115mm + (œdème bilatéral pour Kwash)."},
+      {q:"Un enfant marasmique c'est quelqu'un qui :",options:["Est jovial","Est grincheux","Présente des œdèmes","Est cachectique avec faciès simiesque"],answer:0,explanation:"Paradoxalement, l'enfant marasmique est JOVIAL (contrairement au Kwashiorkor qui est apathique/grincheux). Le marasme = émaciation sévère sans œdème, faciès «vieillard»."},
+      {q:"L'œdème dans la MAS type Kwashiorkor est expliqué par :",options:["Une fuite massive de protéines dans les urines","Une carence en protéines et en énergie","Une carence surtout en protéines","Une carence surtout en énergie"],answer:2,explanation:"L'œdème du Kwashiorkor = carence SURTOUT en protéines → hypoalbuminémie → diminution de la pression oncotique → passage du liquide vers le secteur interstitiel."},
+      {q:"Le signe clinique majeur du Kwashiorkor est :",options:["La cachexie","La maigreur","L'œdème","L'anémie"],answer:2,explanation:"L'œdème est LE signe cardinal du Kwashiorkor. Il est bilatéral, mou, indolore, prenant le godet, débutant aux membres inférieurs."},
+      {q:"Les indicateurs anthropométriques de la malnutrition (SAUF rapport Taille/Âge) :",options:["Taille, Poids, Rapport P/T, Périmètre brachial — a, b et d vraies","a, c, d et e vraies","Toutes les réponses"],answer:0,explanation:"Les indicateurs de la MAS : Poids, Taille, Rapport Poids/Taille (P/T), Périmètre Brachial (PB). Le rapport Taille/Âge évalue la malnutrition chronique."},
+      {q:"Sources de protéines, SAUF :",options:["Viandes","Poissons","Pistache","Céréales"],answer:3,explanation:"Les céréales sont principalement des sources de GLUCIDES (énergetiques). Bonnes sources protéiques : viandes, poissons, œufs, légumineuses (haricots, pistache/arachides)."}
+    ]
+  },
+  {
+    id:12, title:"Diarrhée Invasive & Mécanismes", icon:"🦠", color:"#55EFC4", glow:"#55EFC444",
+    presentation:`En pédiatrie, la diarrhée est l'une des principales causes de morbi-mortalité infantile. En consultation, vous devez identifier le mécanisme de la diarrhée, ses agents causaux, ses complications et sa prise en charge. Une attention particulière est portée à la diarrhée invasive et aux germes viraux.`,
+    questions:[
+      {q:"Une diarrhée invasive :",options:["D'origine bactérienne","Contient du sang et des glaires","Très liquidienne et abondante","a et b"],answer:3,explanation:"La diarrhée invasive = d'origine bactérienne + contient du sang et des glaires (selles glairo-sanguinolentes). Elle résulte de l'invasion de la muqueuse intestinale. Réponse : a et b."},
+      {q:"Font partie des germes de diarrhée virale SAUF :",options:["Rotavirus","Adénovirus","Coronavirus","Escherichia coli","Entérovirus"],answer:3,explanation:"E. coli est une BACTÉRIE. Les virus responsables de diarrhée : Rotavirus (le plus fréquent < 5 ans), Adénovirus, Coronavirus, Entérovirus, Norovirus."},
+      {q:"La diarrhée osmotique c'est la destruction des entérocytes qui entraîne une absorption insuffisante d'eau :",options:["Vrai","Faux"],answer:1,explanation:"FAUX. La diarrhée osmotique est due à une substance osmotiquement active non absorbée. La destruction des entérocytes correspond plutôt à la diarrhée sécrétoire virale."},
+      {q:"Les 3 mécanismes principaux de diarrhée en pédiatrie sont :",options:["Sécrétoire, Invasive, Motrice (accélération du transit)","Osmotique, Sécrétoire, Invasive","Exsudative, Sécrétoire, Osmotique","Toutes les réponses"],answer:0,explanation:"Les 3 mécanismes : 1) Sécrétoire (hypersécrétion, ex: choléra), 2) Invasive (destruction muqueuse, ex: shigellose), 3) Motrice/accélération du transit."},
+      {q:"En cas de shigellose suspectée (selles glairo-sanguinolentes, fièvre), l'antibiothérapie est :",options:["Optionnelle selon la gravité","Systématique","Uniquement en hospitalisation","Jamais indiquée"],answer:1,explanation:"En cas de shigellose, l'antibiothérapie est SYSTÉMATIQUE (cotrimoxazole ou ciprofloxacine selon résistance locale)."},
+      {q:"Le SHU (Syndrome Hémolytique et Urémique) = triade :",options:["Insuffisance rénale aiguë + Anémie + Thrombopénie","Hématurie + Protéinurie + HTA","Diarrhée + Fièvre + Convulsions","Œdème + Hypoalbuminémie + Hyperlipidémie"],answer:0,explanation:"Le SHU = triade : Insuffisance Rénale Aiguë + Anémie hémolytique microangiopathique + Thrombopénie. Complique souvent une infection à E. coli O157:H7 après diarrhée sanglante."}
+    ]
+  },
+  {
+    id:13, title:"Paludisme & Fièvre Typhoïde", icon:"🦟", color:"#74B9FF", glow:"#74B9FF44",
+    presentation:`En Haïti, le paludisme et la fièvre typhoïde sont deux pathologies infectieuses fébriles majeures. Un enfant de 8 ans se présente pour fièvre, céphalées, vomissements et frissons. Un autre présente une fièvre en plateau depuis 10 jours avec des troubles digestifs.`,
+    questions:[
+      {q:"Espèces de Plasmodium pathogènes pour l'homme :",options:["Plasmodium vivax, berghei, falciparum","P. vivax, falciparum, ovale — a, c et d pathogènes","P. berghei, P. costneyi","Aucune"],answer:1,explanation:"Pathogènes pour l'homme : P. falciparum (la plus mortelle), P. vivax, P. ovale, P. malariae, P. knowlesi. P. berghei et P. costneyi = parasites de rongeurs."},
+      {q:"Le vecteur du paludisme :",options:["Est un moustique mâle du genre Anophèles","Est un moustique femelle du genre Aedes","Pique à partir du coucher du soleil","Ne rentre pas dans les habitations"],answer:2,explanation:"L'Anophèle FEMELLE est le vecteur du paludisme. Elle pique principalement la nuit (du coucher au lever du soleil) et rentre dans les habitations. L'Aedes = vecteur dengue/Zika."},
+      {q:"Signes compatibles avec un accès palustre de primo-invasion NON compliqué (a,b,e vraies) :",options:["Fièvre, céphalées, raideur méningée","Fièvre, céphalées, vomissements — a, b et e vraies","Photophobie, raideur méningée, convulsions","Aucune"],answer:1,explanation:"Accès palustre simple : fièvre + céphalées + vomissements + myalgies + frissons. La raideur méningée et photophobie évoquent méningite ou accès grave."},
+      {q:"Signes d'évolution vers un accès palustre grave (b, c et e vraies) :",options:["Fièvre en plateau à 39,5°C, vomissements","Somnolence, abolition d'un ROT, dyspnée — b, c et e vraies","Céphalées isolées","Frissons avec sudation"],answer:1,explanation:"Signes de gravité OMS : troubles de conscience/somnolence, abolition ROT, dyspnée, convulsions, ictère, hémoglobinurie, collapsus."},
+      {q:"Ce sont des germes de pneumonie atypique SAUF :",options:["Chlamydia trachomatis","Uréaplasma Uréalyticum","Cytomégalovirus","Streptocoque du groupe B"],answer:3,explanation:"Le Streptocoque du groupe B = pneumonie TYPIQUE (bactérienne classique), surtout chez le nouveau-né. Germes atypiques : Mycoplasma, Chlamydia, Légionella, Uréaplasma, CMV."},
+      {q:"Concernant la fièvre typhoïde, toutes les réponses sont vraies SAUF :",options:["La période de complications est surtout la 3ème septenaire","Elle est liée au péril fécal","La période d'incubation est de 7 à 21 jours","La principale complication est la pneumonie"],answer:3,explanation:"La principale complication de la fièvre typhoïde est la PERFORATION intestinale (3ème semaine), pas la pneumonie. Autres : hémorragie digestive, encéphalite typhoïdique."}
+    ]
+  },
+  {
+    id:14, title:"Vomissements & Pathologie Digestive", icon:"🏥", color:"#A29BFE", glow:"#A29BFE44",
+    presentation:`En pédiatrie, les vomissements sont le 2ème motif de consultation. Un nourrisson de 6 semaines présente des vomissements en jets non bilieux après chaque biberon depuis 2 semaines. Un enfant de 2 mois a des vomissements, douleur abdominale, refus du biberon et épisodes de pâleur.`,
+    questions:[
+      {q:"La 1ère cause de vomissement en pédiatrie est :",options:["Le syndrome infectieux","La sténose hypertrophique du pylore","Le RGO","L'occlusion intestinale"],answer:0,explanation:"Le syndrome infectieux (ORL, digestif, respiratoire, urinaire) est la 1ère cause de vomissements en pédiatrie."},
+      {q:"Les régurgitations correspondent à :",options:["Un passage fort du contenu gastrique par le pylore","Un passage passif du contenu gastrique vers l'œsophage sans contraction abdominale","Un vomissement actif avec effort","Une occlusion basse"],answer:1,explanation:"La régurgitation = passage PASSIF sans effort ni contraction abdominale. Le vomissement = phénomène ACTIF avec contraction du diaphragme et des abdominaux."},
+      {q:"Enfant 2 mois à 2 ans avec régurgitations, douleur abdominale, pâleur épisodique — penser à :",options:["Un RGO simple","Sténose hypertrophique du pylore","Invagination intestinale aiguë","Une gastroentérite"],answer:2,explanation:"Ce tableau chez un enfant 6-18 mois avec épisodes intermittents de pâleur/douleur + refus biberon = INVAGINATION INTESTINALE AIGUË — urgence chirurgicale !"},
+      {q:"La sténose hypertrophique du pylore (SHP) présente :",options:["Des vomissements bilieux en jets","Des vomissements non bilieux en jets + prise de poids insuffisante","De la diarrhée + fièvre","Des vomissements avec hématurie"],answer:1,explanation:"La SHP = vomissements NON bilieux (obstacle pré-ampullaire) en jets abondants, après chaque repas, chez nourrisson 2-8 semaines. Enfant affamé. Olive pylorique palpable + échographie confirment."},
+      {q:"En cas de vomissements aigus avec douleur, l'urgence symptomatologique est :",options:["La déshydratation aiguë","La détresse respiratoire","Le diagnostic étiologique aigu","La septicémie"],answer:2,explanation:"En cas de vomissements aigus avec douleur abdominale, l'urgence = diagnostic étiologique (éliminer occlusion, appendicite, invagination, péritonite). La réhydratation suit le diagnostic."},
+      {q:"Les vomissements fécaloïdes (odeur fécale) signent :",options:["Une rupture du contenu intestinal remontant vers l'estomac en cas d'occlusion basse","Un appel vestibulaire","Un RGO sévère","Aucune"],answer:0,explanation:"Les vomissements fécaloïdes = occlusion intestinale BASSE avec stase et fermentation remontant jusqu'à l'estomac. Urgence chirurgicale absolue."}
+    ]
+  },
+  {
+    id:15, title:"Brûlures, Hydrocèle & Traumatisme", icon:"🩺", color:"#E84393", glow:"#E8439344",
+    presentation:`Aux urgences, vous recevez : 1) Un enfant avec une brûlure thermique couvrant le thorax antérieur et postérieur + un membre supérieur. 2) Un homme de 30 ans avec une grosse bourse droite irréductible, non impulsive, trans-illuminante. 3) Un enfant tombé d'un manguier, somnolent, avec plaie abrasive pariétale gauche.`,
+    questions:[
+      {q:"D'après la règle des 9 — brûlure thorax ant + post + 1 membre supérieur :",options:["18%","27%","36%","45%"],answer:1,explanation:"Règle des 9 : Thorax ant = 9% + Thorax post = 9% + 1 MS = 9% → Total = 27%."},
+      {q:"Au sujet des brûlures, la proposition INEXACTE est :",options:["La brûlure du 3ème degré entraîne une anesthésie de la région","La brûlure de 2ème degré profond n'aura pas de séquelles","L'infection est à craindre dans le 2ème degré","La brûlure de 1er degré est très douloureuse"],answer:1,explanation:"INEXACT : La brûlure du 2ème degré PROFOND PEUT entraîner des séquelles. C'est le 2ème degré SUPERFICIEL qui guérit sans séquelles."},
+      {q:"Pour la grosse bourse droite trans-illuminante, non impulsive — votre diagnostic est :",options:["Hernie inguino-scrotale droite","Kyste du cordon spermatique","Orchite droite","Hydrocèle droit","Varicocèle droit"],answer:3,explanation:"L'hydrocèle = collection liquidienne dans la vaginale testiculaire. Signes clés : trans-illumination POSITIVE (liquide clair), non impulsive. Confirmé par échographie."},
+      {q:"L'examen paraclinique le plus utile pour confirmer le diagnostic d'hydrocèle est :",options:["Hémogramme complet","Radiographie du bassin","Échographie des bourses","Bilan hormonal","Test des urines"],answer:2,explanation:"L'échographie des bourses confirme l'hydrocèle (collection anéchogène entourant le testicule) et élimine une tumeur testiculaire sous-jacente."},
+      {q:"L'hydrocèle droit présente à l'examen physique :",options:["Manœuvre de Valsalva positive","Trans-illumination positive","Trans-illumination négative","Signe de l'obturateur présent"],answer:1,explanation:"La trans-illumination POSITIVE est pathognomonique de l'hydrocèle : la lumière traverse le liquide clair. La hernie et les tumeurs solides ne trans-illuminent pas."},
+      {q:"L'enfant tombé du manguier qui devient somnolent — première chose à faire :",options:["Radiographie du crâne","Scanner cérébral immédiat","Hospitalisation et surveillance neurologique rapprochée","Ponction lombaire","Renvoi à domicile"],answer:2,explanation:"Tout traumatisme crânien avec trouble de la conscience = hospitalisation + surveillance neurologique rapprochée en URGENCE. Scanner indiqué pour éliminer hématome intracérébral."}
+    ]
+  }
+];
+
+// ==================== STATE ====================
+let currentScreen = 'home';
+let currentCase = null;
+let currentQ = 0;
+let answers = {};
+let showExplanation = false;
+let selectedOption = null;
+let allScores = {};
+
+// ==================== PARTICLES ====================
+function createParticles() {
+  const container = document.getElementById('particles');
+  const colors = CASES.map(c => c.color);
+  for (let i = 0; i < 20; i++) {
+    const el = document.createElement('div');
+    el.className = 'particle';
+    const size = 4 + Math.random() * 8;
+    el.style.cssText = `
+      left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${size}px;height:${size}px;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${3 + Math.random()*4}s;
+      animation-delay:${Math.random()*4}s;
+    `;
+    container.appendChild(el);
+  }
+}
+
+// ==================== SCREEN NAV ====================
+function showScreen(name, caseData) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  const el = document.getElementById('screen-' + name);
+  if (!el) return;
+  el.classList.remove('hidden');
+  currentScreen = name;
+
+  if (name === 'home') renderHome();
+  if (name === 'caseList') renderCaseList();
+  if (name === 'quiz' && caseData) {
+    currentCase = caseData;
+    currentQ = 0;
+    answers = {};
+    showExplanation = false;
+    selectedOption = null;
+    renderQuiz();
+  }
+  if (name === 'results') renderResults();
+  if (name === 'allResults') renderAllResults();
+
+  window.scrollTo(0, 0);
+}
+
+// ==================== HOME ====================
+function renderHome() {
+  const totalA = Object.values(allScores).reduce((s,v) => s+v.answered, 0);
+  const totalC = Object.values(allScores).reduce((s,v) => s+v.correct, 0);
+  document.getElementById('home-global-score').textContent =
+    totalA > 0 ? Math.round(totalC/totalA*100) + '%' : '—';
+}
+
+// ==================== CASE LIST ====================
+function renderCaseList() {
+  const grid = document.getElementById('case-grid');
+  grid.innerHTML = '';
+  CASES.forEach((c, i) => {
+    const sc = allScores[c.id];
+    const pct = sc ? Math.round(sc.correct/sc.answered*100) : null;
+    const badgeHTML = sc ? `
+      <div class="case-score-badge" style="background:${pct>=70?'#00B89422':pct>=50?'#FDCB6E22':'#FF6B6B22'}">
+        <span>${pct>=70?'✅':pct>=50?'⚠️':'❌'}</span>
+        <span style="font-size:13px;font-weight:700;color:${pct>=70?'#00B894':pct>=50?'#FDCB6E':'#FF6B6B'}">${pct}%</span>
+        <span style="font-size:11px;color:#7070a0">(${sc.correct}/${sc.answered})</span>
+      </div>` : '';
+
+    const div = document.createElement('div');
+    div.className = 'case-card';
+    div.style.cssText = `border-left:4px solid ${c.color};box-shadow:0 4px 24px ${c.glow};`;
+    div.innerHTML = `
+      <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:${c.glow};filter:blur(20px)"></div>
+      <div style="font-size:32px;margin-bottom:8px">${c.icon}</div>
+      <div class="case-num" style="color:${c.color}">CAS ${String(i+1).padStart(2,'0')}</div>
+      <div class="case-title">${c.title}</div>
+      <div class="case-qcount">${c.questions.length} questions</div>
+      ${badgeHTML}
+    `;
+    div.onclick = () => showScreen('quiz', c);
+    grid.appendChild(div);
+  });
+}
+
+// ==================== QUIZ ====================
+function renderQuiz() {
+  const c = currentCase;
+  const q = c.questions[currentQ];
+
+  // Header
+  document.getElementById('quiz-case-icon').textContent = c.icon;
+  document.getElementById('quiz-case-title').style.color = c.color;
+  document.getElementById('quiz-case-title').textContent = c.title;
+  const pct = ((currentQ + 1) / c.questions.length * 100);
+  const fill = document.getElementById('quiz-progress-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = c.color;
+  fill.style.boxShadow = `0 0 8px ${c.color}`;
+  document.getElementById('quiz-q-num').style.color = c.color;
+  document.getElementById('quiz-q-num').innerHTML = `${currentQ+1}<span style="color:#7070a0;font-weight:400;font-size:14px">/${c.questions.length}</span>`;
+
+  // Vignette
+  document.getElementById('quiz-vignette-label').style.color = c.color;
+  document.getElementById('quiz-vignette').style.borderLeftColor = c.color;
+  document.getElementById('quiz-vignette').style.boxShadow = `0 4px 24px ${c.glow}`;
+  document.getElementById('quiz-vignette-text').textContent = c.presentation;
+
+  // Question
+  document.getElementById('quiz-q-label').textContent = `QUESTION ${currentQ+1}`;
+  document.getElementById('quiz-q-text').textContent = q.q;
+
+  // Options
+  const optContainer = document.getElementById('quiz-options');
+  optContainer.innerHTML = '';
+  q.options.forEach((opt, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.style.cssText = `background:#12121a;border:2px solid #2a2a40;color:#e8e8f0;`;
+    btn.innerHTML = `
+      <span class="option-letter" style="background:${c.color}33;color:${c.color}">${String.fromCharCode(65+idx)}</span>
+      <span>${opt}</span>
+    `;
+    btn.onclick = () => handleAnswer(idx);
+    optContainer.appendChild(btn);
+  });
+
+  // Reset
+  document.getElementById('quiz-explanation').classList.add('hidden');
+  document.getElementById('quiz-actions').classList.add('hidden');
+  showExplanation = false;
+  selectedOption = null;
+}
+
+function handleAnswer(optIdx) {
+  if (showExplanation) return;
+  selectedOption = optIdx;
+  showExplanation = true;
+  answers[currentQ] = optIdx;
+
+  const c = currentCase;
+  const q = c.questions[currentQ];
+  const optBtns = document.querySelectorAll('#quiz-options .option-btn');
+
+  optBtns.forEach((btn, idx) => {
+    const letter = btn.querySelector('.option-letter');
+    const isCorrect = idx === q.answer;
+    const isSelected = idx === optIdx;
+
+    if (isCorrect) {
+      btn.style.background = '#00B89422';
+      btn.style.borderColor = '#00B894';
+      btn.style.color = '#00B894';
+      btn.style.transform = 'scale(1.01)';
+      btn.style.boxShadow = '0 0 16px #00B89444';
+      letter.style.background = '#00B894';
+      letter.style.color = 'white';
+      letter.textContent = '✓';
+    } else if (isSelected && !isCorrect) {
+      btn.style.background = '#FF6B6B22';
+      btn.style.borderColor = '#FF6B6B';
+      btn.style.color = '#FF6B6B';
+      letter.style.background = '#FF6B6B';
+      letter.style.color = 'white';
+      letter.textContent = '✗';
+    } else {
+      btn.style.background = '#12121a';
+      btn.style.borderColor = '#2a2a40';
+      btn.style.color = '#7070a0';
+      letter.style.background = '#2a2a40';
+      letter.style.color = '#7070a0';
+    }
+    btn.style.cursor = 'default';
+  });
+
+  // Explanation
+  document.getElementById('quiz-explanation-text').textContent = q.explanation;
+  document.getElementById('quiz-explanation').classList.remove('hidden');
+
+  // Actions
+  const btnNext = document.getElementById('btn-next');
+  const isLast = currentQ >= c.questions.length - 1;
+  btnNext.textContent = isLast ? 'Voir mes résultats' : 'Question suivante →';
+  btnNext.style.cssText = `background:linear-gradient(135deg,${c.color},${c.color}aa);border:none;color:white;padding:12px 28px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:700;box-shadow:0 4px 20px ${c.glow};`;
+  document.getElementById('quiz-actions').classList.remove('hidden');
+}
+
+function nextOrFinish() {
+  if (currentQ < currentCase.questions.length - 1) {
+    currentQ++;
+    renderQuiz();
+  } else {
+    finishCase();
+  }
+}
+
+function finishCase() {
+  const c = currentCase;
+  const correct = Object.entries(answers).filter(([qi, ans]) => c.questions[parseInt(qi)]?.answer === ans).length;
+  allScores[c.id] = { correct, answered: c.questions.length };
+  showScreen('results');
+}
+
+function quitCase() {
+  finishCase();
+  showScreen('caseList');
+}
+
+// ==================== RESULTS ====================
+function renderResults() {
+  const c = currentCase;
+  const sc = allScores[c.id] || { correct: 0, answered: c.questions.length };
+  const pct = Math.round(sc.correct / sc.answered * 100);
+  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : pct >= 40 ? '📚' : '💪';
+  const msg = pct >= 80 ? 'Excellent !' : pct >= 60 ? 'Bien joué !' : pct >= 40 ? 'Continue tes révisions !' : 'Il faut revoir ce chapitre !';
+
+  document.getElementById('result-emoji').textContent = emoji;
+  document.getElementById('result-title').textContent = msg;
+  document.getElementById('result-title').style.color = c.color;
+  document.getElementById('result-case-name').textContent = c.title;
+  document.getElementById('result-pct').textContent = pct + '%';
+  document.getElementById('result-pct').style.color = c.color;
+  document.getElementById('result-frac').textContent = `${sc.correct}/${sc.answered}`;
+
+  // Ring
+  const circle = document.getElementById('result-ring-circle');
+  const circ = 2 * Math.PI * 70;
+  circle.style.stroke = c.color;
+  circle.style.filter = `drop-shadow(0 0 6px ${c.color})`;
+  setTimeout(() => {
+    circle.style.strokeDasharray = `${(pct/100)*circ} ${circ}`;
+  }, 100);
+
+  const btnRetry = document.getElementById('btn-retry');
+  btnRetry.style.cssText = `background:linear-gradient(135deg,${c.color},${c.color}88);border:none;color:white;padding:14px 32px;border-radius:50px;cursor:pointer;font-size:15px;font-weight:700;box-shadow:0 6px 24px ${c.glow};`;
+}
+
+function retryCase() {
+  showScreen('quiz', currentCase);
+}
+
+// ==================== ALL RESULTS ====================
+function renderAllResults() {
+  const totalA = Object.values(allScores).reduce((s,v) => s+v.answered, 0);
+  const totalC = Object.values(allScores).reduce((s,v) => s+v.correct, 0);
+  const completedCount = Object.keys(allScores).length;
+
+  document.getElementById('ar-cases').textContent = `${completedCount}/15`;
+  document.getElementById('ar-questions').textContent = `${totalA}/90`;
+  document.getElementById('ar-score').textContent = totalA > 0 ? Math.round(totalC/totalA*100)+'%' : '—';
+
+  const list = document.getElementById('ar-list');
+  list.innerHTML = '';
+  CASES.forEach(c => {
+    const sc = allScores[c.id];
+    const pct = sc ? Math.round(sc.correct/sc.answered*100) : null;
+    const scoreColor = pct !== null ? (pct>=70?'#00B894':pct>=50?'#FDCB6E':'#FF6B6B') : '#7070a0';
+
+    const row = document.createElement('div');
+    row.style.cssText = `background:#1a1a28;border:1px solid #2a2a40;border-left:4px solid ${sc?c.color:'#2a2a40'};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px;`;
+    row.innerHTML = `
+      <span style="font-size:20px">${c.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.title}</div>
+        ${sc ? `
+          <div class="mini-bar-track">
+            <div class="mini-bar-fill" style="width:${pct}%;background:${scoreColor}"></div>
+          </div>
+        ` : '<div style="font-size:11px;color:#7070a0">Non commencé</div>'}
+      </div>
+      ${sc ? `
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:16px;font-weight:800;color:${scoreColor}">${pct}%</div>
+          <div style="font-size:11px;color:#7070a0">${sc.correct}/${sc.answered}</div>
+        </div>
+      ` : `<button onclick="showScreen('quiz', CASES[${CASES.indexOf(c)}])" style="background:#12121a;border:1px solid #2a2a40;color:#7070a0;padding:6px 14px;border-radius:10px;cursor:pointer;font-size:12px;flex-shrink:0">Commencer →</button>`}
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ==================== INIT ====================
+createParticles();
+renderHome();
+</script>
+</body>
+</html>
